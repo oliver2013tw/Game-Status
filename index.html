@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>遊戲狀態</title>
+<title>Nova 遊戲狀態</title>
 
 <style>
 body {
@@ -122,9 +122,13 @@ onValue(statusRef, (snapshot) => {
 
   if (!data) {
     stateText.innerText = "無資料";
+    gameText.innerText = "";
+    timerText.innerText = "";
+    dot.className = "dot offline";
     return;
   }
 
+  // 清掉之前的 interval
   if (interval) {
     clearInterval(interval);
     interval = null;
@@ -138,7 +142,11 @@ onValue(statusRef, (snapshot) => {
 
     function updateTimer() {
       const now = Date.now();
-      const diff = now - data.startTime;
+
+      // Automate 可能存秒數，要轉成毫秒
+      const start = data.startTime > 1e12 ? data.startTime : data.startTime * 1000;
+      const diff = now - start;
+
       timerText.innerText = "⏱ 本次遊戲時間 " + formatTime(diff);
     }
 
