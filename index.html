@@ -70,7 +70,7 @@ h1 {
 <body>
 
 <div class="card">
-  <h1>🎮 Nova 遊戲狀態</h1>
+  <h1>🎮 遊戲狀態</h1>
 
   <div class="status">
     <span id="dot" class="dot offline"></span>
@@ -155,7 +155,7 @@ onValue(statusRef, (snapshot) => {
 
   } else {
 
-    stateText.innerText = "目前未在遊戲中";
+    stateText.innerText = "未在遊戲中";
     gameText.innerText = "";
     timerText.innerText = "";
     dot.className = "dot offline";
