@@ -1,83 +1,128 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>遊戲狀態</title>
-<!-- Firebase SDK -->
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>遊戲狀態監控</title>
+
+<!-- Firebase compat -->
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
-<style>
-  /* 🔹 整個頁面不滾動 */
-  html, body {
-    margin: 0;
-    padding: 0;
-    overflow: hidden; /* 不可上下滾動 */
-    height: 100%;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #6b73ff, #000dff);
-    color: #fff;
-  }
 
-  /* 🔹 中間容器 */
-  .container {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    height: 100%;
-    padding: 20px;
-    box-sizing: border-box;
-    text-align: center;
+<style>
+  /* 不允許滾動 */
+  html,body { height:100%; margin:0; padding:0; overflow:hidden; font-family: "Segoe UI", Roboto, "Noto Sans TC", system-ui, -apple-system; background: #0f1115; color:#e6eef1; }
+
+  /* 中央卡片 */
+  .wrap {
+    height:100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    box-sizing:border-box;
+  }
+  .card {
+    width:100%;
+    max-width:520px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02));
+    border-radius:16px;
+    padding:28px;
+    box-shadow: 0 10px 30px rgba(2,6,23,0.7), inset 0 1px 0 rgba(255,255,255,0.02);
+    backdrop-filter: blur(8px);
+    text-align:center;
   }
 
   h1 {
-    font-size: 2.2rem;
-    margin-bottom: 20px;
-    text-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    margin:0 0 12px 0;
+    font-weight:600;
+    color:#f5fbff;
+    font-size:1.6rem;
+    letter-spacing:0.4px;
   }
 
-  .status {
-    font-size: 1.5rem;
-    margin: 15px 0;
-    padding: 10px 20px;
-    border-radius: 12px;
-    background: rgba(255, 255, 255, 0.2);
-    backdrop-filter: blur(6px);
+  .status-row {
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:12px;
+    margin-top:10px;
   }
 
-  button {
-    padding: 15px 30px;
-    font-size: 1.2rem;
+  .dot {
+    width:14px; height:14px; border-radius:50%;
+    box-shadow: 0 4px 12px rgba(2,6,23,0.6);
+    transition: transform .18s ease, box-shadow .18s ease;
+  }
+  .dot.off { background: #b84a4a; transform: scale(1); box-shadow:0 6px 18px rgba(184,74,74,0.18); }
+  .dot.on  { background: #2fe3b6; transform: scale(1.06); box-shadow:0 10px 26px rgba(47,227,182,0.18); }
+
+  .state-text { font-size:1.05rem; color:#dffbf3; }
+  .game-name { margin-top:8px; font-size:1.25rem; color:#c9fff0; font-weight:700; }
+
+  .timer {
+    margin-top:12px;
+    font-size:1.05rem;
+    color:#f0f7f3;
+    opacity:0.95;
+  }
+
+  .controls { margin-top:20px; display:flex; gap:12px; justify-content:center; align-items:center; flex-wrap:wrap; }
+  .btn {
+    -webkit-tap-highlight-color: transparent;
+    background: linear-gradient(90deg,#ffb86b 0%, #ffde7a 100%);
     border: none;
-    border-radius: 12px;
-    cursor: pointer;
-    background: linear-gradient(135deg, #ff758c, #ff7eb3);
-    color: #fff;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-    transition: transform 0.2s, box-shadow 0.2s;
+    color: #0b1012;
+    padding:12px 20px;
+    border-radius:10px;
+    font-weight:600;
+    cursor:pointer;
+    box-shadow: 0 8px 20px rgba(10,14,18,0.45);
+    transition: transform .12s ease, box-shadow .12s ease, opacity .12s;
+  }
+  .btn:active { transform: translateY(1px) scale(.998); }
+  .btn.secondary {
+    background: transparent;
+    color:#bcd8d0;
+    border:1px solid rgba(255,255,255,0.04);
+    box-shadow:none;
   }
 
-  button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.4);
-  }
+  /* 小字 */
+  .muted { margin-top:10px; font-size:0.85rem; color: #9fb2ac; opacity:0.9; }
 
-  button:active {
-    transform: translateY(0);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+  @media (max-width:420px) {
+    .card { padding:20px; border-radius:14px; }
+    h1 { font-size:1.35rem; }
   }
 </style>
 </head>
 <body>
-<div class="container">
-  <h1>遊戲狀態監控</h1>
-  <div class="status">遊戲狀態：<span id="gameStatus">不在遊戲中</span></div>
-  <button id="inviteBtn">邀請上線</button>
-</div>
+  <div class="wrap">
+    <div class="card" role="main" aria-live="polite">
+      <h1>遊戲狀態監控</h1>
+
+      <div class="status-row" aria-hidden="false">
+        <span id="dot" class="dot off" aria-hidden="true"></span>
+        <div>
+          <div id="stateText" class="state-text">讀取中…</div>
+          <div id="gameName" class="game-name"></div>
+        </div>
+      </div>
+
+      <div id="timer" class="timer" aria-live="polite"></div>
+
+      <div class="controls">
+        <button id="inviteBtn" class="btn">🎉 邀請上線</button>
+        <button id="refreshBtn" class="btn secondary" title="手動重整狀態">重新整理</button>
+      </div>
+
+      <div class="muted">按下「邀請上線」後，Automate 會偵測 & 發送通知。</div>
+    </div>
+  </div>
 
 <script>
-  // 🔹 Firebase 配置
+  // Firebase config — 保持你原本的
   const firebaseConfig = {
     apiKey: "AIzaSyDrcsNwolJ33wYPtgHBFbQMHTpNVcgSngs",
     authDomain: "nova-game-status.firebaseapp.com",
@@ -89,27 +134,141 @@
     measurementId: "G-J8QD6GXYL8"
   };
 
-  // 🔹 初始化 Firebase
+  // 初始化 firebase (compat)
   const app = firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
 
-  const gameStatusEl = document.getElementById('gameStatus');
+  // UI 元件
+  const dot = document.getElementById('dot');
+  const stateText = document.getElementById('stateText');
+  const gameName = document.getElementById('gameName');
+  const timerEl = document.getElementById('timer');
   const inviteBtn = document.getElementById('inviteBtn');
+  const refreshBtn = document.getElementById('refreshBtn');
 
-  // 🔹 監聽遊戲狀態
+  let timerInterval = null;
+
+  // 將各種可能回傳值 (true/"true"/1/"1") 判作上線
+  function isTruthy(val) {
+    return val === true || val === 1 || val === "1" || val === "true";
+  }
+
+  function setOnlineUI(game) {
+    dot.classList.remove('off'); dot.classList.add('on');
+    stateText.textContent = '上線中';
+    gameName.textContent = game || '';
+  }
+  function setOfflineUI() {
+    dot.classList.remove('on'); dot.classList.add('off');
+    stateText.textContent = '未上線';
+    gameName.textContent = '';
+    timerEl.textContent = '';
+    if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+  }
+
+  // 更新計時器：支援 status.startTime (物件) 或 single startTime value
+  function startTimerFromStartTime(rawStart) {
+    if (!rawStart) {
+      timerEl.textContent = '';
+      return;
+    }
+    // rawStart 可能是秒或毫秒 -> 保險轉成毫秒
+    const startMs = (rawStart > 1e12) ? rawStart : rawStart * 1000;
+    function tick() {
+      const diff = Date.now() - startMs;
+      if (diff < 0) {
+        timerEl.textContent = '';
+        return;
+      }
+      const totalSec = Math.floor(diff / 1000);
+      const hh = String(Math.floor(totalSec / 3600)).padStart(2,'0');
+      const mm = String(Math.floor((totalSec % 3600) / 60)).padStart(2,'0');
+      const ss = String(totalSec % 60).padStart(2,'0');
+      timerEl.textContent = `⏱ 本次遊戲時間 ${hh}:${mm}:${ss}`;
+    }
+    if (timerInterval) clearInterval(timerInterval);
+    tick();
+    timerInterval = setInterval(tick, 1000);
+  }
+
+  // 預設：先顯示未上線
+  setOfflineUI();
+
+  // 監聽兩種常見寫法：
+  // 1) /status 節點（物件，含 playing, game, startTime）
+  // 2) /playing 節點（單一值）
+  const statusRef = db.ref('status');
   const playingRef = db.ref('playing');
-  playingRef.on('value', (snapshot) => {
-    const playing = snapshot.val();
-    gameStatusEl.textContent = playing ? '上線中' : '未上線';
+
+  // 當 status 節點更新時以 status 為主
+  statusRef.on('value', snap => {
+    const data = snap.val();
+    if (!data) {
+      // 如果沒有 status 節點，不強行設為未上線，讓 playingRef 決定
+      return;
+    }
+    const playing = data.playing;
+    if (isTruthy(playing)) {
+      setOnlineUI(data.game || '');
+      startTimerFromStartTime(data.startTime || data.start || 0);
+    } else {
+      setOfflineUI();
+    }
+  }, err => {
+    console.warn('statusRef error', err);
   });
 
-  // 🔹 按下邀請按鈕
+  // 當 playing 節點更新時（若 status 沒提供則以 playing 決定）
+  playingRef.on('value', snap => {
+    const val = snap.val();
+    // 若 status 存在且有 playing 屬性，status listener 已處理優先
+    db.ref('status').once('value').then(snapStatus => {
+      const st = snapStatus.val();
+      if (st && typeof st.playing !== 'undefined') {
+        // status 已經有資料 => 忽略單一 playing 的覆蓋
+        return;
+      }
+      if (isTruthy(val)) {
+        // 沒有細節時只顯示上線，名稱空白
+        setOnlineUI('');
+        // 無 startTime 可用
+        timerEl.textContent = '';
+      } else {
+        setOfflineUI();
+      }
+    }).catch(()=>{ /* ignore */ });
+  });
+
+  // invite 按鈕：把 inviteRequest 設為 true（不做自動重置）
   inviteBtn.addEventListener('click', () => {
+    inviteBtn.disabled = true;
     const inviteRef = db.ref('inviteRequest');
     inviteRef.set(true)
-      .then(() => alert('已發送邀請上線訊息'))
-      .catch(err => alert('發送失敗：' + err));
+      .then(() => {
+        // 短暫提示
+        inviteBtn.textContent = '已發送 ✓';
+        setTimeout(()=>{ inviteBtn.textContent = '🎉 邀請上線'; inviteBtn.disabled = false; }, 1200);
+      })
+      .catch(err => {
+        alert('發送失敗：' + (err && err.message ? err.message : err));
+        inviteBtn.disabled = false;
+      });
   });
+
+  // 手動刷新（debug / 強制重新抓）
+  refreshBtn.addEventListener('click', () => {
+    // 強制讀一次 status / playing
+    Promise.all([ db.ref('status').once('value'), db.ref('playing').once('value') ])
+      .then(([s,p])=>{
+        // 會由上面的 listener 自動更新 UI
+        // 只是快速提示使用者
+        const sd = s.val(), pd = p.val();
+        console.log('refresh status', sd, 'playing', pd);
+      }).catch(e=>console.warn(e));
+  });
+
+  // optional: 防止頁面被系統手勢誤滑動（在一些 Android Webview 有用）
+  window.addEventListener('touchmove', function(e){ e.preventDefault(); }, { passive: false });
 </script>
 </body>
 </html>
