@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>遊戲狀態</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  background: linear-gradient(135deg, #141e30, #243b55);
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+.card {
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(20px);
+  padding: 40px;
+  border-radius: 25px;
+  text-align: center;
+  width: 90%;
+  max-width: 420px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+}
+
+h1 {
+  margin: 0;
+  font-weight: 600;
+}
+
+.status {
+  margin-top: 25px;
+  font-size: 20px;
+}
+
+.game {
+  font-size: 28px;
+  font-weight: bold;
+  margin-top: 10px;
+  color: #00ffd5;
+}
+
+.timer {
+  margin-top: 15px;
+  font-size: 22px;
+  letter-spacing: 2px;
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 8px;
+}
+
+.online { background: #00ff88; }
+.offline { background: #ff4d4d; }
+
+@media (max-width: 480px) {
+  .card { padding: 25px; }
+}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h1>🎮 Nova 遊戲狀態</h1>
+
+  <div class="status">
+    <span id="dot" class="dot offline"></span>
+    <span id="state">讀取中...</span>
+  </div>
+
+  <div id="game" class="game"></div>
+  <div id="timer" class="timer"></div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDrcsNwolJ33wYPtgHBFbQMHTpNVcgSngs",
+  authDomain: "nova-game-status.firebaseapp.com",
+  databaseURL: "https://nova-game-status-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "nova-game-status",
+  storageBucket: "nova-game-status.firebasestorage.app",
+  messagingSenderId: "441392361547",
+  appId: "1:441392361547:web:8ba275c3caae6033499dce"
+};
+
+const app = initializeApp(firebaseConfig);
+const database = getDatabase(app);
+const statusRef = ref(database, "status");
+
+const stateText = document.getElementById("state");
+const gameText = document.getElementById("game");
+const timerText = document.getElementById("timer");
+const dot = document.getElementById("dot");
+
+let interval = null;
+
+function formatTime(ms) {
+  const totalSeconds = Math.floor(ms / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  return String(hours).padStart(2,'0') + ":" +
+         String(minutes).padStart(2,'0') + ":" +
+         String(seconds).padStart(2,'0');
+}
+
+onValue(statusRef, (snapshot) => {
+  const data = snapshot.val();
+
+  if (!data) {
+    stateText.innerText = "無資料";
+    return;
+  }
+
+  if (interval) {
+    clearInterval(interval);
+    interval = null;
+  }
+
+  if (data.playing == 1 && data.startTime) {
+
+    stateText.innerText = "正在遊玩";
+    gameText.innerText = data.game;
+    dot.className = "dot online";
+
+    function updateTimer() {
+      const now = Date.now();
+      const diff = now - data.startTime;
+      timerText.innerText = "⏱ 本次遊戲時間 " + formatTime(diff);
+    }
+
+    updateTimer();
+    interval = setInterval(updateTimer, 1000);
+
+  } else {
+
+    stateText.innerText = "目前未在遊戲中";
+    gameText.innerText = "";
+    timerText.innerText = "";
+    dot.className = "dot offline";
+
+  }
+});
+</script>
+
+</body>
+</html>
