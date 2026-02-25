@@ -1,274 +1,185 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>遊戲狀態監控</title>
 
-<!-- Firebase compat -->
+<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
 
 <style>
-  /* 不允許滾動 */
-  html,body { height:100%; margin:0; padding:0; overflow:hidden; font-family: "Segoe UI", Roboto, "Noto Sans TC", system-ui, -apple-system; background: #0f1115; color:#e6eef1; }
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden; /* 禁止上下滾動 */
+  font-family: "Segoe UI", Roboto, "Noto Sans TC", sans-serif;
+  background: #0f172a;
+  color: #f1f5f9;
+}
 
-  /* 中央卡片 */
-  .wrap {
-    height:100%;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    padding:20px;
-    box-sizing:border-box;
-  }
-  .card {
-    width:100%;
-    max-width:520px;
-    background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02));
-    border-radius:16px;
-    padding:28px;
-    box-shadow: 0 10px 30px rgba(2,6,23,0.7), inset 0 1px 0 rgba(255,255,255,0.02);
-    backdrop-filter: blur(8px);
-    text-align:center;
-  }
+.wrapper {
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  box-sizing: border-box;
+}
 
-  h1 {
-    margin:0 0 12px 0;
-    font-weight:600;
-    color:#f5fbff;
-    font-size:1.6rem;
-    letter-spacing:0.4px;
-  }
+.card {
+  width: 100%;
+  max-width: 500px;
+  background: #1e293b;
+  border-radius: 16px;
+  padding: 30px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+  text-align: center;
+}
 
-  .status-row {
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    gap:12px;
-    margin-top:10px;
-  }
+h1 {
+  margin-top: 0;
+  font-size: 1.6rem;
+  font-weight: 600;
+}
 
-  .dot {
-    width:14px; height:14px; border-radius:50%;
-    box-shadow: 0 4px 12px rgba(2,6,23,0.6);
-    transition: transform .18s ease, box-shadow .18s ease;
-  }
-  .dot.off { background: #b84a4a; transform: scale(1); box-shadow:0 6px 18px rgba(184,74,74,0.18); }
-  .dot.on  { background: #2fe3b6; transform: scale(1.06); box-shadow:0 10px 26px rgba(47,227,182,0.18); }
+.status {
+  margin: 20px 0;
+  font-size: 1.2rem;
+}
 
-  .state-text { font-size:1.05rem; color:#dffbf3; }
-  .game-name { margin-top:8px; font-size:1.25rem; color:#c9fff0; font-weight:700; }
+.status span {
+  font-weight: bold;
+}
 
-  .timer {
-    margin-top:12px;
-    font-size:1.05rem;
-    color:#f0f7f3;
-    opacity:0.95;
-  }
+.online {
+  color: #22c55e;
+}
 
-  .controls { margin-top:20px; display:flex; gap:12px; justify-content:center; align-items:center; flex-wrap:wrap; }
-  .btn {
-    -webkit-tap-highlight-color: transparent;
-    background: linear-gradient(90deg,#ffb86b 0%, #ffde7a 100%);
-    border: none;
-    color: #0b1012;
-    padding:12px 20px;
-    border-radius:10px;
-    font-weight:600;
-    cursor:pointer;
-    box-shadow: 0 8px 20px rgba(10,14,18,0.45);
-    transition: transform .12s ease, box-shadow .12s ease, opacity .12s;
-  }
-  .btn:active { transform: translateY(1px) scale(.998); }
-  .btn.secondary {
-    background: transparent;
-    color:#bcd8d0;
-    border:1px solid rgba(255,255,255,0.04);
-    box-shadow:none;
-  }
+.offline {
+  color: #ef4444;
+}
 
-  /* 小字 */
-  .muted { margin-top:10px; font-size:0.85rem; color: #9fb2ac; opacity:0.9; }
+button {
+  margin-top: 20px;
+  padding: 14px 24px;
+  font-size: 1rem;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  background: #facc15;
+  color: #1e293b;
+  font-weight: 600;
+  transition: 0.2s;
+}
 
-  @media (max-width:420px) {
-    .card { padding:20px; border-radius:14px; }
-    h1 { font-size:1.35rem; }
-  }
+button:hover {
+  opacity: 0.9;
+}
+
+button:disabled {
+  background: #64748b;
+  cursor: not-allowed;
+  color: #e2e8f0;
+}
 </style>
 </head>
+
 <body>
-  <div class="wrap">
-    <div class="card" role="main" aria-live="polite">
-      <h1>遊戲狀態監控</h1>
-
-      <div class="status-row" aria-hidden="false">
-        <span id="dot" class="dot off" aria-hidden="true"></span>
-        <div>
-          <div id="stateText" class="state-text">讀取中…</div>
-          <div id="gameName" class="game-name"></div>
-        </div>
-      </div>
-
-      <div id="timer" class="timer" aria-live="polite"></div>
-
-      <div class="controls">
-        <button id="inviteBtn" class="btn">🎉 邀請上線</button>
-        <button id="refreshBtn" class="btn secondary" title="手動重整狀態">重新整理</button>
-      </div>
-
-      <div class="muted">按下「邀請上線」後，Automate 會偵測 & 發送通知。</div>
+<div class="wrapper">
+  <div class="card">
+    <h1>遊戲狀態監控</h1>
+    <div class="status">
+      目前狀態：
+      <span id="gameStatus" class="offline">讀取中...</span>
     </div>
+    <button id="inviteBtn">🎉 邀請上線</button>
   </div>
+</div>
 
 <script>
-  // Firebase config — 保持你原本的
-  const firebaseConfig = {
-    apiKey: "AIzaSyDrcsNwolJ33wYPtgHBFbQMHTpNVcgSngs",
-    authDomain: "nova-game-status.firebaseapp.com",
-    databaseURL: "https://nova-game-status-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "nova-game-status",
-    storageBucket: "nova-game-status.firebasestorage.app",
-    messagingSenderId: "441392361547",
-    appId: "1:441392361547:web:8ba275c3caae6033499dce",
-    measurementId: "G-J8QD6GXYL8"
-  };
+/* 🔹 Firebase 設定 */
+const firebaseConfig = {
+  apiKey: "AIzaSyDrcsNwolJ33wYPtgHBFbQMHTpNVcgSngs",
+  authDomain: "nova-game-status.firebaseapp.com",
+  databaseURL: "https://nova-game-status-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "nova-game-status",
+  storageBucket: "nova-game-status.firebasestorage.app",
+  messagingSenderId: "441392361547",
+  appId: "1:441392361547:web:8ba275c3caae6033499dce"
+};
 
-  // 初始化 firebase (compat)
-  const app = firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 
-  // UI 元件
-  const dot = document.getElementById('dot');
-  const stateText = document.getElementById('stateText');
-  const gameName = document.getElementById('gameName');
-  const timerEl = document.getElementById('timer');
-  const inviteBtn = document.getElementById('inviteBtn');
-  const refreshBtn = document.getElementById('refreshBtn');
+/* 🔹 狀態監聽 */
+const statusEl = document.getElementById("gameStatus");
 
-  let timerInterval = null;
+function isOnline(val) {
+  return val === true || val === "true" || val === 1 || val === "1";
+}
 
-  // 將各種可能回傳值 (true/"true"/1/"1") 判作上線
-  function isTruthy(val) {
-    return val === true || val === 1 || val === "1" || val === "true";
+db.ref("playing").on("value", snapshot => {
+  const val = snapshot.val();
+  if (isOnline(val)) {
+    statusEl.textContent = "上線中";
+    statusEl.className = "online";
+  } else {
+    statusEl.textContent = "未上線";
+    statusEl.className = "offline";
   }
+});
 
-  function setOnlineUI(game) {
-    dot.classList.remove('off'); dot.classList.add('on');
-    stateText.textContent = '上線中';
-    gameName.textContent = game || '';
-  }
-  function setOfflineUI() {
-    dot.classList.remove('on'); dot.classList.add('off');
-    stateText.textContent = '未上線';
-    gameName.textContent = '';
-    timerEl.textContent = '';
-    if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
-  }
+/* 🔹 10分鐘冷卻機制 */
+const inviteBtn = document.getElementById("inviteBtn");
+const COOLDOWN_MS = 10 * 60 * 1000; // 10分鐘
 
-  // 更新計時器：支援 status.startTime (物件) 或 single startTime value
-  function startTimerFromStartTime(rawStart) {
-    if (!rawStart) {
-      timerEl.textContent = '';
-      return;
-    }
-    // rawStart 可能是秒或毫秒 -> 保險轉成毫秒
-    const startMs = (rawStart > 1e12) ? rawStart : rawStart * 1000;
-    function tick() {
-      const diff = Date.now() - startMs;
-      if (diff < 0) {
-        timerEl.textContent = '';
-        return;
-      }
-      const totalSec = Math.floor(diff / 1000);
-      const hh = String(Math.floor(totalSec / 3600)).padStart(2,'0');
-      const mm = String(Math.floor((totalSec % 3600) / 60)).padStart(2,'0');
-      const ss = String(totalSec % 60).padStart(2,'0');
-      timerEl.textContent = `⏱ 本次在線時間 ${hh}:${mm}:${ss}`;
-    }
-    if (timerInterval) clearInterval(timerInterval);
-    tick();
-    timerInterval = setInterval(tick, 1000);
-  }
+function updateCooldown() {
+  const lastTime = localStorage.getItem("inviteLastTime");
+  if (!lastTime) return;
 
-  // 預設：先顯示未上線
-  setOfflineUI();
+  const diff = Date.now() - parseInt(lastTime);
+  const remaining = COOLDOWN_MS - diff;
 
-  // 監聽兩種常見寫法：
-  // 1) /status 節點（物件，含 playing, game, startTime）
-  // 2) /playing 節點（單一值）
-  const statusRef = db.ref('status');
-  const playingRef = db.ref('playing');
-
-  // 當 status 節點更新時以 status 為主
-  statusRef.on('value', snap => {
-    const data = snap.val();
-    if (!data) {
-      // 如果沒有 status 節點，不強行設為未上線，讓 playingRef 決定
-      return;
-    }
-    const playing = data.playing;
-    if (isTruthy(playing)) {
-      setOnlineUI(data.game || '');
-      startTimerFromStartTime(data.startTime || data.start || 0);
-    } else {
-      setOfflineUI();
-    }
-  }, err => {
-    console.warn('statusRef error', err);
-  });
-
-  // 當 playing 節點更新時（若 status 沒提供則以 playing 決定）
-  playingRef.on('value', snap => {
-    const val = snap.val();
-    // 若 status 存在且有 playing 屬性，status listener 已處理優先
-    db.ref('status').once('value').then(snapStatus => {
-      const st = snapStatus.val();
-      if (st && typeof st.playing !== 'undefined') {
-        // status 已經有資料 => 忽略單一 playing 的覆蓋
-        return;
-      }
-      if (isTruthy(val)) {
-        // 沒有細節時只顯示上線，名稱空白
-        setOnlineUI('');
-        // 無 startTime 可用
-        timerEl.textContent = '';
-      } else {
-        setOfflineUI();
-      }
-    }).catch(()=>{ /* ignore */ });
-  });
-
-  // invite 按鈕：把 inviteRequest 設為 true（不做自動重置）
-  inviteBtn.addEventListener('click', () => {
+  if (remaining > 0) {
     inviteBtn.disabled = true;
-    const inviteRef = db.ref('inviteRequest');
-    inviteRef.set(true)
-      .then(() => {
-        // 短暫提示
-        inviteBtn.textContent = '已發送 ✓';
-        setTimeout(()=>{ inviteBtn.textContent = '🎉 邀請上線'; inviteBtn.disabled = false; }, 1200);
-      })
-      .catch(err => {
-        alert('發送失敗：' + (err && err.message ? err.message : err));
-        inviteBtn.disabled = false;
-      });
-  });
 
-  // 手動刷新（debug / 強制重新抓）
-  refreshBtn.addEventListener('click', () => {
-    // 強制讀一次 status / playing
-    Promise.all([ db.ref('status').once('value'), db.ref('playing').once('value') ])
-      .then(([s,p])=>{
-        // 會由上面的 listener 自動更新 UI
-        // 只是快速提示使用者
-        const sd = s.val(), pd = p.val();
-        console.log('refresh status', sd, 'playing', pd);
-      }).catch(e=>console.warn(e));
-  });
+    const min = Math.floor(remaining / 60000);
+    const sec = Math.floor((remaining % 60000) / 1000);
 
-  // optional: 防止頁面被系統手勢誤滑動（在一些 Android Webview 有用）
-  window.addEventListener('touchmove', function(e){ e.preventDefault(); }, { passive: false });
+    inviteBtn.textContent = `請等待 ${min}:${String(sec).padStart(2,'0')}`;
+    setTimeout(updateCooldown, 1000);
+  } else {
+    inviteBtn.disabled = false;
+    inviteBtn.textContent = "🎉 邀請上線";
+    localStorage.removeItem("inviteLastTime");
+  }
+}
+
+inviteBtn.addEventListener("click", () => {
+  const lastTime = localStorage.getItem("inviteLastTime");
+
+  if (lastTime && Date.now() - parseInt(lastTime) < COOLDOWN_MS) {
+    return;
+  }
+
+  inviteBtn.disabled = true;
+
+  db.ref("inviteRequest").set(true)
+    .then(() => {
+      localStorage.setItem("inviteLastTime", Date.now().toString());
+      updateCooldown();
+    })
+    .catch(err => {
+      alert("發送失敗：" + err);
+      inviteBtn.disabled = false;
+    });
+});
+
+/* 🔹 頁面載入時檢查冷卻 */
+updateCooldown();
 </script>
 </body>
 </html>
