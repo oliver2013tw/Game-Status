@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>遊戲狀態監控</title>
 
-<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
 
@@ -14,7 +13,7 @@ html, body {
   margin: 0;
   padding: 0;
   height: 100%;
-  overflow: hidden; /* 禁止上下滾動 */
+  overflow: hidden;
   font-family: "Segoe UI", Roboto, "Noto Sans TC", sans-serif;
   background: #0f172a;
   color: #f1f5f9;
@@ -26,7 +25,6 @@ html, body {
   justify-content: center;
   align-items: center;
   padding: 20px;
-  box-sizing: border-box;
 }
 
 .card {
@@ -40,9 +38,8 @@ html, body {
 }
 
 h1 {
-  margin-top: 0;
+  margin: 0;
   font-size: 1.6rem;
-  font-weight: 600;
 }
 
 .status {
@@ -50,17 +47,8 @@ h1 {
   font-size: 1.2rem;
 }
 
-.status span {
-  font-weight: bold;
-}
-
-.online {
-  color: #22c55e;
-}
-
-.offline {
-  color: #ef4444;
-}
+.online { color: #22c55e; }
+.offline { color: #ef4444; }
 
 button {
   margin-top: 20px;
@@ -72,17 +60,12 @@ button {
   background: #facc15;
   color: #1e293b;
   font-weight: 600;
-  transition: 0.2s;
-}
-
-button:hover {
-  opacity: 0.9;
 }
 
 button:disabled {
   background: #64748b;
-  cursor: not-allowed;
   color: #e2e8f0;
+  cursor: not-allowed;
 }
 </style>
 </head>
@@ -100,7 +83,7 @@ button:disabled {
 </div>
 
 <script>
-/* 🔹 Firebase 設定 */
+/* Firebase 設定 */
 const firebaseConfig = {
   apiKey: "AIzaSyDrcsNwolJ33wYPtgHBFbQMHTpNVcgSngs",
   authDomain: "nova-game-status.firebaseapp.com",
@@ -114,42 +97,54 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-/* 🔹 狀態監聽 */
 const statusEl = document.getElementById("gameStatus");
+const inviteBtn = document.getElementById("inviteBtn");
 
 function isOnline(val) {
   return val === true || val === "true" || val === 1 || val === "1";
 }
 
+/* 監聽 status 整個節點 */
+db.ref("status").on("value", snapshot => {
+  const data = snapshot.val();
+  if (data && data.playing !== undefined) {
+    updateUI(data.playing);
+  }
+});
+
+/* 監聽 playing 單一節點 */
 db.ref("playing").on("value", snapshot => {
   const val = snapshot.val();
-  if (isOnline(val)) {
+  if (val !== null) {
+    updateUI(val);
+  }
+});
+
+function updateUI(value) {
+  if (isOnline(value)) {
     statusEl.textContent = "上線中";
     statusEl.className = "online";
   } else {
     statusEl.textContent = "未上線";
     statusEl.className = "offline";
   }
-});
+}
 
-/* 🔹 10分鐘冷卻機制 */
-const inviteBtn = document.getElementById("inviteBtn");
-const COOLDOWN_MS = 10 * 60 * 1000; // 10分鐘
+/* 10分鐘冷卻 */
+const COOLDOWN = 10 * 60 * 1000;
 
 function updateCooldown() {
-  const lastTime = localStorage.getItem("inviteLastTime");
-  if (!lastTime) return;
+  const last = localStorage.getItem("inviteLastTime");
+  if (!last) return;
 
-  const diff = Date.now() - parseInt(lastTime);
-  const remaining = COOLDOWN_MS - diff;
+  const diff = Date.now() - parseInt(last);
+  const remain = COOLDOWN - diff;
 
-  if (remaining > 0) {
+  if (remain > 0) {
     inviteBtn.disabled = true;
-
-    const min = Math.floor(remaining / 60000);
-    const sec = Math.floor((remaining % 60000) / 1000);
-
-    inviteBtn.textContent = `請等待 ${min}:${String(sec).padStart(2,'0')}`;
+    const m = Math.floor(remain / 60000);
+    const s = Math.floor((remain % 60000) / 1000);
+    inviteBtn.textContent = `請等待 ${m}:${String(s).padStart(2,'0')}`;
     setTimeout(updateCooldown, 1000);
   } else {
     inviteBtn.disabled = false;
@@ -159,11 +154,8 @@ function updateCooldown() {
 }
 
 inviteBtn.addEventListener("click", () => {
-  const lastTime = localStorage.getItem("inviteLastTime");
-
-  if (lastTime && Date.now() - parseInt(lastTime) < COOLDOWN_MS) {
-    return;
-  }
+  const last = localStorage.getItem("inviteLastTime");
+  if (last && Date.now() - parseInt(last) < COOLDOWN) return;
 
   inviteBtn.disabled = true;
 
@@ -178,7 +170,6 @@ inviteBtn.addEventListener("click", () => {
     });
 });
 
-/* 🔹 頁面載入時檢查冷卻 */
 updateCooldown();
 </script>
 </body>
