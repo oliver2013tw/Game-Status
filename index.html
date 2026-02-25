@@ -184,7 +184,7 @@
       const hh = String(Math.floor(totalSec / 3600)).padStart(2,'0');
       const mm = String(Math.floor((totalSec % 3600) / 60)).padStart(2,'0');
       const ss = String(totalSec % 60).padStart(2,'0');
-      timerEl.textContent = `⏱ 本次遊戲時間 ${hh}:${mm}:${ss}`;
+      timerEl.textContent = `⏱ 本次在線時間 ${hh}:${mm}:${ss}`;
     }
     if (timerInterval) clearInterval(timerInterval);
     tick();
