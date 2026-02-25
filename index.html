@@ -3,22 +3,94 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>遊戲狀態</title>
+<title>遊戲狀態監控</title>
 <style>
-html, body { margin:0; padding:0; height:100%; overflow:hidden; font-family:Arial,sans-serif; background:#0f172a; color:white;}
-.wrapper { display:flex; justify-content:center; align-items:center; height:100%; }
-.card { background:#1e293b; border-radius:16px; padding:30px; width:90%; max-width:400px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.5);}
-#gameName{font-size:20px;margin-bottom:5px;}
-#playTime{font-size:16px;color:#38bdf8;}
-button{margin-top:20px;padding:12px 20px;border:none;border-radius:10px;font-size:1rem;cursor:pointer;background:#facc15;color:#1e293b;font-weight:600;transition:.2s;}
-button:hover{opacity:0.9;}
-button:disabled{background:#64748b;cursor:not-allowed;color:#e2e8f0;}
+html, body {
+  margin:0;
+  padding:0;
+  height:100%;
+  overflow:hidden;
+  font-family: "Segoe UI", Roboto, "Noto Sans TC", sans-serif;
+  background: linear-gradient(135deg, #0f172a, #1e293b);
+  color:white;
+}
+
+.wrapper {
+  height:100%;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  padding:40px;
+  box-sizing:border-box;
+}
+
+.card {
+  width:100%;
+  max-width:500px;
+  background:#1e293b;
+  border-radius:20px;
+  padding:40px;
+  box-shadow:0 15px 40px rgba(0,0,0,0.6);
+  text-align:center;
+}
+
+h1 {
+  margin-top:0;
+  font-size:1.8rem;
+  font-weight:700;
+  margin-bottom:25px;
+}
+
+.status-text {
+  font-size:1.2rem;
+  margin-bottom:15px;
+}
+
+.status-text .online { color:#22c55e; }
+.status-text .offline { color:#ef4444; }
+
+#gameName {
+  font-size:22px;
+  margin-bottom:10px;
+  font-weight:600;
+}
+
+#playTime {
+  font-size:18px;
+  color:#38bdf8;
+  margin-bottom:20px;
+}
+
+button {
+  padding:14px 28px;
+  font-size:1rem;
+  border-radius:12px;
+  border:none;
+  cursor:pointer;
+  background:#facc15;
+  color:#1e293b;
+  font-weight:700;
+  transition:0.2s;
+}
+
+button:hover { opacity:0.9; }
+
+button:disabled {
+  background:#64748b;
+  cursor:not-allowed;
+  color:#e2e8f0;
+}
 </style>
 </head>
 <body>
+
 <div class="wrapper">
   <div class="card">
-    <div id="gameName">載入中...</div>
+    <h1>遊戲狀態監控</h1>
+    <div class="status-text">
+      狀態：<span id="statusText" class="offline">載入中...</span>
+    </div>
+    <div id="gameName">遊戲名稱載入中...</div>
     <div id="playTime"></div>
     <button id="inviteBtn">🎉 邀請上線</button>
   </div>
@@ -42,13 +114,14 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
+/* 元件 */
+const statusText = document.getElementById("statusText");
 const gameName = document.getElementById("gameName");
 const playTime = document.getElementById("playTime");
 const inviteBtn = document.getElementById("inviteBtn");
 
 let timerInterval = null;
 
-/* 🔹 監聽遊戲狀態 */
 const statusRef = ref(db,"/"); // 根目錄 game / playing / startTime
 
 function isPlaying(val){ return val==1 || val===true || val==="1" || val==="true"; }
@@ -58,6 +131,9 @@ onValue(statusRef,(snapshot)=>{
   if(!data) return;
 
   if(isPlaying(data.playing)){
+    statusText.textContent = "上線中";
+    statusText.className = "online";
+
     gameName.textContent = data.game || "未知遊戲";
 
     if(timerInterval) clearInterval(timerInterval);
@@ -73,13 +149,15 @@ onValue(statusRef,(snapshot)=>{
     }
 
   } else {
+    statusText.textContent = "未上線";
+    statusText.className = "offline";
     gameName.textContent = "未在遊玩";
     playTime.textContent = "";
     if(timerInterval) clearInterval(timerInterval);
   }
 });
 
-/* 🔹 邀請上線按鈕 10 分鐘冷卻 */
+/* 邀請上線 10 分鐘冷卻 */
 const COOLDOWN = 10*60*1000;
 function updateCooldown(){
   const last = localStorage.getItem("inviteLastTime");
@@ -92,7 +170,7 @@ function updateCooldown(){
     const s = Math.floor((remain%60000)/1000);
     inviteBtn.textContent = `請等待 ${m}:${String(s).padStart(2,'0')}`;
     setTimeout(updateCooldown,1000);
-  } else {
+  }else{
     inviteBtn.disabled=false;
     inviteBtn.textContent="🎉 邀請上線";
     localStorage.removeItem("inviteLastTime");
