@@ -3,90 +3,22 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>遊戲狀態監控</title>
-
+<title>遊戲狀態</title>
 <style>
-html, body {
-  margin:0;
-  padding:0;
-  height:100%;
-  overflow:hidden;
-  font-family: "Segoe UI", Roboto, "Noto Sans TC", sans-serif;
-  background:#0f172a;
-  color:#f1f5f9;
-}
-
-.wrapper {
-  height:100%;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  padding:20px;
-  box-sizing:border-box;
-}
-
-.card {
-  width:100%;
-  max-width:500px;
-  background:#1e293b;
-  border-radius:16px;
-  padding:30px;
-  box-shadow:0 20px 40px rgba(0,0,0,0.4);
-  text-align:center;
-}
-
-h1 {
-  margin-top:0;
-  font-size:1.6rem;
-  font-weight:600;
-}
-
-.status {
-  margin:20px 0;
-  font-size:1.2rem;
-}
-
-.status span {
-  font-weight:bold;
-}
-
-.online { color:#22c55e; }
-.offline { color:#ef4444; }
-
-#gameName { font-size:20px; margin-bottom:5px; }
-#playTime { font-size:16px; color:#38bdf8; }
-
-button {
-  margin-top:20px;
-  padding:14px 24px;
-  font-size:1rem;
-  border-radius:10px;
-  border:none;
-  cursor:pointer;
-  background:#facc15;
-  color:#1e293b;
-  font-weight:600;
-  transition:0.2s;
-}
-
-button:hover { opacity:0.9; }
-
-button:disabled {
-  background:#64748b;
-  cursor:not-allowed;
-  color:#e2e8f0;
-}
+html, body { margin:0; padding:0; height:100%; overflow:hidden; font-family:Arial,sans-serif; background:#0f172a; color:white;}
+.wrapper { display:flex; justify-content:center; align-items:center; height:100%; }
+.card { background:#1e293b; border-radius:16px; padding:30px; width:90%; max-width:400px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.5);}
+#gameName{font-size:20px;margin-bottom:5px;}
+#playTime{font-size:16px;color:#38bdf8;}
+button{margin-top:20px;padding:12px 20px;border:none;border-radius:10px;font-size:1rem;cursor:pointer;background:#facc15;color:#1e293b;font-weight:600;transition:.2s;}
+button:hover{opacity:0.9;}
+button:disabled{background:#64748b;cursor:not-allowed;color:#e2e8f0;}
 </style>
 </head>
 <body>
-
 <div class="wrapper">
   <div class="card">
-    <h1>遊戲狀態監控</h1>
-    <div class="status">
-      目前狀態：<span id="statusText" class="offline">讀取中...</span>
-    </div>
-    <div id="gameName">遊戲名稱載入中...</div>
+    <div id="gameName">載入中...</div>
     <div id="playTime"></div>
     <button id="inviteBtn">🎉 邀請上線</button>
   </div>
@@ -94,9 +26,9 @@ button:disabled {
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-/* 🔹 你的 Game Status Firebase 設定 */
+/* 🔹 你的 Firebase config */
 const firebaseConfig = {
   apiKey: "AIzaSyDrcsNwolJ33wYPtgHBFbQMHTpNVcgSngs",
   authDomain: "nova-game-status.firebaseapp.com",
@@ -110,8 +42,6 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-/* 🔹 元件 */
-const statusText = document.getElementById("statusText");
 const gameName = document.getElementById("gameName");
 const playTime = document.getElementById("playTime");
 const inviteBtn = document.getElementById("inviteBtn");
@@ -119,43 +49,37 @@ const inviteBtn = document.getElementById("inviteBtn");
 let timerInterval = null;
 
 /* 🔹 監聽遊戲狀態 */
-const statusRef = ref(db, "/");  // 根目錄 game / playing / startTime
+const statusRef = ref(db,"/"); // 根目錄 game / playing / startTime
 
-function isPlaying(val){ return val == 1 || val === true || val === "1" || val === "true"; }
+function isPlaying(val){ return val==1 || val===true || val==="1" || val==="true"; }
 
-onValue(statusRef, (snapshot) => {
+onValue(statusRef,(snapshot)=>{
   const data = snapshot.val();
-  if (!data) return;
+  if(!data) return;
 
-  // 更新遊戲狀態
   if(isPlaying(data.playing)){
-    statusText.textContent = "上線中";
-    statusText.className = "online";
-
     gameName.textContent = data.game || "未知遊戲";
 
     if(timerInterval) clearInterval(timerInterval);
 
     if(data.startTime){
-      timerInterval = setInterval(() => {
+      timerInterval = setInterval(()=>{
         const diff = Date.now() - Number(data.startTime);
-        const h = Math.floor(diff / 3600000);
-        const m = Math.floor((diff % 3600000) / 60000);
-        const s = Math.floor((diff % 60000) / 1000);
+        const h = Math.floor(diff/3600000);
+        const m = Math.floor((diff%3600000)/60000);
+        const s = Math.floor((diff%60000)/1000);
         playTime.textContent = `${h}小時 ${m}分 ${s}秒`;
-      }, 1000);
+      },1000);
     }
 
-  }else{
-    statusText.textContent = "未上線";
-    statusText.className = "offline";
+  } else {
     gameName.textContent = "未在遊玩";
     playTime.textContent = "";
     if(timerInterval) clearInterval(timerInterval);
   }
 });
 
-/* 🔹 邀請按鈕 10 分鐘冷卻 */
+/* 🔹 邀請上線按鈕 10 分鐘冷卻 */
 const COOLDOWN = 10*60*1000;
 function updateCooldown(){
   const last = localStorage.getItem("inviteLastTime");
@@ -163,14 +87,14 @@ function updateCooldown(){
 
   const remain = COOLDOWN - (Date.now() - Number(last));
   if(remain>0){
-    inviteBtn.disabled = true;
+    inviteBtn.disabled=true;
     const m = Math.floor(remain/60000);
     const s = Math.floor((remain%60000)/1000);
     inviteBtn.textContent = `請等待 ${m}:${String(s).padStart(2,'0')}`;
     setTimeout(updateCooldown,1000);
-  }else{
-    inviteBtn.disabled = false;
-    inviteBtn.textContent = "🎉 邀請上線";
+  } else {
+    inviteBtn.disabled=false;
+    inviteBtn.textContent="🎉 邀請上線";
     localStorage.removeItem("inviteLastTime");
   }
 }
@@ -181,7 +105,7 @@ inviteBtn.addEventListener("click",()=>{
 
   inviteBtn.disabled=true;
 
-  ref(db,"inviteRequest").set(true)
+  set(ref(db,"inviteRequest"),true)
     .then(()=>{
       localStorage.setItem("inviteLastTime",Date.now().toString());
       updateCooldown();
@@ -193,7 +117,6 @@ inviteBtn.addEventListener("click",()=>{
 });
 
 updateCooldown();
-
 </script>
 </body>
 </html>
